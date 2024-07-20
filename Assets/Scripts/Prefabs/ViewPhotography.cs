@@ -26,6 +26,7 @@ namespace Prefabs
             //PNGデータ変換
             byte[] bytes = texture.EncodeToPNG();
             string pngData = System.Convert.ToBase64String(bytes);
+            string pngString = "data:image/png;base64," + pngData; //URI
 
             //レンダリング解放
             _viewCamera.targetTexture = null;
@@ -33,7 +34,7 @@ namespace Prefabs
             renderTexture.Release();
             Destroy(texture);
 
-            return pngData;
+            return pngString;
         }
     }
 }

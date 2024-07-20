@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -8,30 +9,30 @@ namespace Prefabs
 {
     public class GptConnection : MonoBehaviour
     {
+        [Serializable]
+        public class GetResponseData
+        {
+            [Serializable]
+            public class Choice
+            {
+                [Serializable]
+                public class Message
+                {
+                    public string role;
+                    public string content;
+                }
+
+                public Message message;
+            }
+
+            public Choice[] choices;
+        }
+
         [SerializeField] private ViewPhotography _viewPhotography;
         [SerializeField] private string _googleAppsScriptId; //Google App Script ID
         [SerializeField] private string _prompt; //プロンプト文
 
         private string _googleAppsScriptUrl;
-
-        //JSONからの返答を格納する
-        [System.Serializable]
-        public class GetResponseData
-        {
-            [System.Serializable]
-            public class Choice
-            {
-                public Message message;
-            }
-
-            [System.Serializable]
-            public class Message
-            {
-                public string content;
-            }
-
-            public Choice[] choices;
-        }
 
         private void Awake()
         {
@@ -40,8 +41,8 @@ namespace Prefabs
 
         private async void Start()
         {
-            //var screenShot = _viewPhotography.ScreenShot();
-            var response = await GetResponse("こんにちは。");
+            var screenShot = _viewPhotography.ScreenShot();
+            var response = await GetResponse(screenShot);
             Debug.Log(response);
         }
 
@@ -90,25 +91,44 @@ namespace Prefabs
         private async Task<string> ApiConnection(string apiKey, string prompt, string input)
         {
             //APIのURL
-            var url = "https://api.openai.com/v1/chat/completions";
+            var apiUrl = "https://api.openai.com/v1/chat/completions";
 
-            //リクエストの設定
+            //送信ペイロード
             var payload = new
             {
                 model = "gpt-4o",
-                messages = new[]
+                messages = new object[]
                 {
-                    new { role = "system", content = prompt },
+                    new
+                    {
+                        role = "system",
+                        content = prompt,
+                    },
+                    new
+                    {
+                        role = "user",
+                        content = new object[]
+                        {
+                            new
+                            {
+                                type = "image_url",
+                                image_url = new
+                                {
+                                    url = input,
+                                },
+                            },
+                        },
+                    },
                 },
                 max_tokens = 100,
-                temperature = 1
+                temperature = 1,
             };
 
             //Jsonの作成
             string jsonData = JsonConvert.SerializeObject(payload);
 
             //リクエストの作成
-            UnityWebRequest request = new UnityWebRequest(url, "POST");
+            UnityWebRequest request = new UnityWebRequest(apiUrl, "POST");
             byte[] bodyRaw = new System.Text.UTF8Encoding().GetBytes(jsonData);
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
             request.downloadHandler = new DownloadHandlerBuffer();
